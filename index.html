@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cawood‑AI Developer Guide – All Tools & How to Talk to the Assistant</title>
+<style>
+body {font-family:Arial,Helvetica,sans-serif; margin:20px; line-height:1.6; max-width:1000px;}
+h1,h2,h3 {color:#2c3e50;}
+pre {background:#f4f4f4; padding:10px; border-radius:4px; overflow:auto;}
+code {background:#eaeaea; padding:2px 4px; border-radius:3px;}
+section {margin-bottom:30px;}
+table {border-collapse:collapse; width:100%; margin-top:10px;}
+table, th, td {border:1px solid #ddd;}
+th, td {padding:8px; text-align:left; vertical-align:top;}
+ul {margin-left:20px;}
+</style>
+</head>
+<body>
+<h1>Cawood‑AI Developer Guide – All Tools & How to Talk to the Assistant</h1>
+<p>This guide explains every tool that the <strong>Cawood‑AI</strong> integration exposes in your Home Assistant instance, and shows how you can converse with the built‑in conversation entity (<code>conversation.cloud_api_gemma_4_31b</code>) to make the assistant perform those actions.</p>
+
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#intro">Intro – Who is Cawood‑AI?</a></li>
+<li><a href="#talk">Talking to the Assistant</a></li>
+<li><a href="#tools">Full Tool Cheat‑Sheet</a></li>
+<li><a href="#camera">Camera (Hikvision) Tools</a></li>
+<li><a href="#ha">Home Assistant Core Tools</a></li>
+<li><a href="#files">File‑System Tools</a></li>
+<li><a href="#terminal">Terminal & Browser Tools</a></li>
+<li><a href="#projects">Project & Email Tools</a></li>
+<li><a href="#integrations">Custom Integration Calls</a></li>
+<li><a href="#meta">Meta & Helper Tools</a></li>
+<li><a href="#examples">Full Conversation Example</a></li>
+<li><a href="#faq">FAQ</a></li>
+</ol>
+
+<h2 id="intro">1. Intro – Who is Cawood‑AI?</h2>
+<p>Cawood‑AI is a private AI assistant running inside your Home Assistant <strong>CSHv4</strong> installation. It is backed by the OpenAI Cloud (the <code>conversation.cloud_api_gemma_4_31b</code> entity) and is equipped with a set of <em>tool functions</em> that let it read files, run commands, control devices, query cameras, and more. When you ask a question, the assistant decides which tool to call, executes it, and returns a concise answer.</p>
+
+<h2 id="talk">2. Talking to the Assistant</h2>
+<p>The easiest way to interact is via the <strong>Conversation</strong> integration. You can type or speak a request, and Home Assistant will route it to the Gemma LLM.</p>
+<ul>
+<li><strong>Service call (UI / Scripts / Automations)</strong>:</li>
+</ul>
+<pre><code>service: conversation.process
+entity_id: conversation.cloud_api_gemma_4_31b
+data:
+  text: "Turn on the living‑room lights"
+  agent_id: conversation.cloud_api_gemma_4_31b
+  # Optional – capture the response in a variable
+  response_variable: talk_reply
+</code></pre>
+<p>When <code>response_variable</code> is provided, the full JSON response is stored in a temporary variable that you can use in subsequent actions (e.g. a <code>notify</code> or <code>input_text.set_value</code> service).</p>
+<ul>
+<li><strong>Direct chat UI</strong>: Open <code>Developer Tools → Services → conversation.process</code> or use the sidebar “Talk to Assistant”.</li>
+<li><strong>From a script</strong> (Python HASS):</li>
+</ul>
+<pre><code>resp = await hass.services.async_call(
+    "conversation",
+    "process",
+    {"text": "Give me the list of cameras", "agent_id": "conversation.cloud_api_gemma_4_31b"},
+    blocking=True,
+    return_response=True,
+)
+# resp will contain a dict with the LLM answer and any tool output
+</code></pre>
+
+<h2 id="tools">3. Full Tool Cheat‑Sheet</h2>
+<p>Below is a quick reference for every tool the assistant can use. Each entry shows the tool name, required parameters, and a tiny example.</p>
+<table>
+<tr><th>Tool</th><th>Category</th><th>Parameters (required)</th><th>Example</th></tr>
+<tr><td>camera_list</td><td>Camera</td><td>None (optional dvr)</td><td>list all cameras</td></tr>
+<tr><td>camera_analyze</td><td>Camera</td><td>channel, frames (1‑5)</td><td>Analyze front‑door: <code>{"channel":101,"frames":3}</code></td></tr>
+<tr><td>camera_events</td><td>Camera</td><td>channel (optional), limit, since_hours</td><td>Show last hour of activity</td></tr>
+<tr><td>camera_snapshot</td><td>Camera</td><td>channel</td><td>Get a still image</td></tr>
+<tr><td>camera_known</td><td>Camera</td><td>None</td><td>List known people/objects</td></tr>
+<tr><td>camera_teach</td><td>Camera</td><td>event_id, summary, threat_level</td><td>Teach a name</td></tr>
+<tr><td>camera_questions</td><td>Camera</td><td>status, channel</td><td>List open questions</td></tr>
+<tr><td>camera_answer</td><td>Camera</td><td>question_id, answer</td><td>Answer “Who is the child?”</td></tr>
+<tr><td>camera_rules</td><td>Camera</td><td>None</td><td>Show threat rules</td></tr>
+<tr><td>camera_set_rule</td><td>Camera</td><td>who, kind, level</td><td>Set unknown‑person‑night = high</td></tr>
+<tr><td>ha_list_entities</td><td>HA Core</td><td>domain, area, query</td><td>Find all lights</td></tr>
+<tr><td>ha_get_state</td><td>HA Core</td><td>entity_id</td><td>Get state of sensor.temp</td></tr>
+<tr><td>ha_call_service</td><td>HA Core</td><td>domain, service, entity_id, data</td><td>Turn on light</td></tr>
+<tr><td>integration_list</td><td>HA Core</td><td>None</td><td>List custom integrations</td></tr>
+<tr><td>integration_call</td><td>HA Core</td><td>domain, service, data</td><td>Call artificial_intelligence.cai_hikvision_get_events</td></tr>
+<tr><td>fs_list</td><td>Files</td><td>path</td><td>List config folder</td></tr>
+<tr><td>fs_read</td><td>Files</td><td>path, offset</td><td>Read a file</td></tr>
+<tr><td>fs_write</td><td>Files</td><td>path, content, mode</td><td>Create script</td></tr>
+<tr><td>fs_mkdir</td><td>Files</td><td>path</td><td>Create folder</td></tr>
+<tr><td>fs_move</td><td>Files</td><td>path, to</td><td>Rename file</td></tr>
+<tr><td>fs_delete</td><td>Files</td><td>path, recursive</td><td>Delete folder</td></tr>
+<tr><td>list_machines</td><td>Terminal</td><td>None</td><td>Show agents</td></tr>
+<tr><td>run_command</td><td>Terminal</td><td>command, machine, cwd, timeout</td><td>Ping 8.8.8.8 on ha</td></tr>
+<tr><td>python_run</td><td>Terminal</td><td>code, cwd, timeout, stdin</td><td>Simple script</td></tr>
+<tr><td>python_hass</td><td>Terminal</td><td>code, timeout</td><td>Read all lights</td></tr>
+<tr><td>browser</td><td>Terminal</td><td>action, url, selector, text, key, script, machine</td><td>Goto a page</td></tr>
+<tr><td>project_list</td><td>Projects</td><td>None</td><td>List all projects</td></tr>
+<tr><td>project_search</td><td>Projects</td><td>folder, query, budget</td><td>Search notes for “router”</td></tr>
+<tr><td>project_share_email</td><td>Projects</td><td>folder, to, linkHours</td><td>Share project</td></tr>
+<tr><td>email_send</td><td>Email</td><td>to, subject, body</td><td>Send alert</td></tr>
+<tr><td>describe_capabilities</td><td>Meta</td><td>topic</td><td>Explain how browser works</td></tr>
+</table>
+<p>Every tool can be called directly by the assistant when you phrase a request that matches its intent. For example, saying “Show me the last hour of activity on camera 101” will cause the assistant to invoke <code>camera_events</code> with <code>channel=101</code> and <code>since_hours=1</code>.</p>
+
+<h2 id="camera">4. Camera (Hikvision) Tools</h2>
+<p>The CCTV subsystem provides a full AI pipeline. Use the tools to get live analysis, historical events, and to teach the AI.</p>
+<ul>
+<li><strong>camera_list</strong> – Shows each camera, its number, name, detection state, and last AI summary.</li>
+<li><strong>camera_analyze</strong> – Capture 1‑5 frames now and get a structured analysis (people, vehicles, animals, threat level, recognised names). Example call:</li>
+</ul>
+<pre><code>service: artificial_intelligence.cai_hikvision_analyze
+entity_id: camera.front_door
+# In a script you would call ha_call_service with:
+ data:
+   channel: 101
+   frames: 3
+   question: "Is anyone at the gate?"
+   notify: true
+</code></pre>
+<ul>
+<li><strong>camera_events</strong> – Pull the log of AI analyses. You can filter by <code>channel</code>, <code>since_hours</code>, and <code>limit</code>.</li>
+<li><strong>camera_snapshot</strong> – Returns a base‑64 image of the latest frame (useful for dashboards).</li>
+<li><strong>camera_known</strong> – List all people/vehicles the AI has learned (use before answering “who is X?”.)</li>
+<li><strong>camera_teach</strong> – Correct a past analysis: give <code>event_id</code>, a proper <code>summary</code>, and optionally set <code>threat_level</code> and <code>remember_threat</code>.</li>
+<li><strong>camera_questions & camera_answer</strong> – The AI can ask you to identify an unknown person. List open questions with <code>camera_questions</code> and answer with <code>camera_answer</code>.</li>
+<li><strong>camera_rules & camera_set_rule</strong> – Define custom threat rules, e.g. “unknown person at night = high”.</li>
+</ul>
+
+<h2 id="ha">5. Home Assistant Core Tools</h2>
+<p>These tools interact with the normal HA entity model (only exposed entities are visible to the voice assistant).</p>
+<ul>
+<li><strong>ha_list_entities</strong> – List entities with optional filters. Great for “What lights are on?”.</li>
+<li><strong>ha_get_state</strong> – Get the state and attributes of a specific entity or a CSV list of entities.</li>
+<li><strong>ha_call_service</strong> – Call any standard HA service (light.turn_on, switch.toggle, climate.set_temperature, etc.).</li>
+<li><strong>integration_list / integration_call</strong> – Discover custom integrations and invoke their services. For example, the <code>artificial_intelligence</code> integration provides <code>cai_hikvision_get_events</code>.</li>
+</ul>
+<p>When a tool is not exposed via ha_* (e.g. device registry or hidden entities), use <code>python_hass</code> for direct <code>hass</code> object access.</p>
+
+<h2 id="files">6. File‑System Tools</h2>
+<p>All paths are relative to one of the base locations:</p>
+<ul>
+<li><code>config</code> – Home Assistant <code>/config</code> folder.</li>
+<li><code>projects</code> – All project folders.</li>
+<li><code>_workspace</code> – Scratch folder for temporary files.</li>
+<li><code>smb:ShareName</code> – Network shares.</li>
+</ul>
+<p>Typical workflow:</p>
+<pre><code># 1️⃣ List the config folder
+service: artificial_intelligence.fs_list
+entity_id: ''
+data:
+  path: "config"
+
+# 2️⃣ Read a file (offset 0 for start)
+service: artificial_intelligence.fs_read
+entity_id: ''
+data:
+  path: "config/configuration.yaml"
+  offset: 0
+
+# 3️⃣ Write a new helper script
+service: artificial_intelligence.fs_write
+entity_id: ''
+data:
+  path: "_workspace/hello.py"
+  content: "print('Hello from Home Assistant')"
+  mode: "create"
+</code></pre>
+
+<h2 id="terminal">7. Terminal & Browser Tools</h2>
+<ul>
+<li><strong>list_machines</strong> – Shows the HA container (<code>ha</code>) and any registered agents (e.g., <code>Cawood‑Linux</code>).</li>
+<li><strong>run_command</strong> – Execute a shell command on a machine. Example:</li>
+</ul>
+<pre><code>service: artificial_intelligence.run_command
+entity_id: ''
+data:
+  command: "df -h"
+  machine: "ha"
+  cwd: "/"
+  timeout: 30
+</code></pre>
+<ul>
+<li><strong>python_run</strong> – Run a one‑off Python script in an isolated process (no live <code>hass</code> object).</li>
+<li><strong>python_hass</strong> – Run Python inside Home Assistant with full <code>hass</code> access. Example – list all lights:</li>
+</ul>
+<pre><code>service: artificial_intelligence.python_hass
+entity_id: ''
+data:
+  code: "return {e.entity_id: e.state for e in hass.states.async_all('light')}"
+</code></pre>
+<ul>
+<li><strong>browser</strong> – Drive a real browser on an agent machine (click, type, read, screenshot). Useful for web‑automation tasks.</li>
+</ul>
+
+<h2 id="projects">8. Project & Email Tools</h2>
+<ul>
+<li><strong>project_list</strong> – List all stored knowledge projects.</li>
+<li><strong>project_search</strong> – Search through documents, PDFs, and notes in a project. Returns the most relevant passages.</li>
+<li><strong>project_share_email</strong> – Email a project (up to 5 recipients) with a temporary link.</li>
+<li><strong>email_send</strong> – Send a plain email via the server’s mail account. Useful for alerts.</li>
+</ul>
+
+<h2 id="integrations">9. Custom Integration Calls</h2>
+<p>The <code>integration_list</code> service enumerates all custom integrations you have installed (e.g., <code>alarmo</code>, <code>alexa_media</code>, <code>browser_mod</code>, <code>gonzales</code>, <code>hikconnect</code>, <code>powercalc</code>). After you know the domain and service name, call it with <code>integration_call</code>.</p>
+<p>Example – arm the Alarmo alarm panel:</p>
+<pre><code>service: artificial_intelligence.integration_call
+entity_id: ''
+data:
+  domain: alarmo
+  service: arm
+  data:
+    entity_id: alarm_control_panel.alarm
+    mode: "away"
+    code: "1234"
+</code></pre>
+
+<h2 id="meta">10. Meta & Helper Tools</h2>
+<ul>
+<li><strong>describe_capabilities</strong> – Ask the assistant to explain any tool group (e.g., <code>topic: "cameras"</code>). Great for debugging.</li>
+</ul>
+
+<h2 id="examples">11. Full Conversation Example (5‑step chat)</h2>
+<p>Below is a complete script that asks the assistant to start a 2‑minute discussion about the universe, capture each answer, and finally dump the entire log into <code>_workspace/universe_chat_log.txt</code>.</p>
+<pre><code># 1️⃣ Prompt the LLM – start the chat
+- service: conversation.process
+  entity_id: conversation.cloud_api_gemma_4_31b
+  data:
+    text: "Let's have a short conversation about how the universe was created. Ask me follow‑up questions as needed."
+    response_variable: step1
+
+# 2️⃣ Store the first reply
+- service: input_text.set_value
+  target:
+    entity_id: input_text.chat_step_1
+  data:
+    value: "{{ step1.response.speech.plain.speech }}"
+
+# 3️⃣ Ask the next question (use the previous answer as context)
+- service: conversation.process
+  entity_id: conversation.cloud_api_gemma_4_31b
+  data:
+    text: "{{ step1.response.speech.plain.speech }} What role did quantum fluctuations play?"
+    response_variable: step2
+
+- service: input_text.set_value
+  target:
+    entity_id: input_text.chat_step_2
+  data:
+    value: "{{ step2.response.speech.plain.speech }}"
+
+# 4️⃣ Continue with three more prompts (dark matter, inflation, open questions)...
+# (repeat the pattern above, changing the text each time)
+
+# 5️⃣ Consolidate everything into a single text file
+- service: artificial_intelligence.fs_write
+  entity_id: ''
+  data:
+    path: "_workspace/universe_chat_log.txt"
+    content: >-
+      {{ states('input_text.chat_step_1') }}\n\n{{ states('input_text.chat_step_2') }}\n\n{{ states('input_text.chat_step_3') }}\n\n{{ states('input_text.chat_step_4') }}\n\n{{ states('input_text.chat_step_5') }}
+    mode: "overwrite"
+</code></pre>
+<p>After the script runs, open <code>https://cawood94.co.za/local/universe_chat_log.txt</code> (once you move it to <code>www</code> as shown in step 5) to see the full transcript.</p>
+
+<h2 id="faq">12. FAQ</h2>
+<ul>
+<li><strong>Do I need to specify <code>agent_id</code>?</strong> Only when you want to use a non‑default conversation agent. For the built‑in Gemma model use <code>conversation.cloud_api_gemma_4_31b</code>.</li>
+<li><strong>Can I chain tools?</strong> Yes – the assistant can call multiple tools in one request. You can also call tools sequentially in an automation.</li>
+<li><strong>Where are the logs?</strong> All tool calls are logged in Home Assistant’s <code>logbook</code> and can be inspected via <code>Developer Tools → Events → conversation</code>.</li>
+<li><strong>How do I see the raw JSON response?</strong> Use the <code>response_variable</code> in a <code>conversation.process</code> call and reference <code>{{ myvar}}</code> in a template or notification.</li>
+<li><strong>Is there a rate‑limit?</strong> The cloud integration respects OpenAI’s limits. For heavy usage, consider the <code>Plus</code> or <code>Pro</code> plan.</li>
+</ul>
+
+<hr>
+<p>Save this file as <code>cawood_ai_guide.html</code> in <code>/config/www/</code> and open it at <a href="https://cawood94.co.za/local/cawood_ai_guide.html">https://cawood94.co.za/local/cawood_ai_guide.html</a>.</p>
+</body>
+</html>
