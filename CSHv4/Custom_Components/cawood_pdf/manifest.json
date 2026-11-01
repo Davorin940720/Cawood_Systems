@@ -1,0 +1,14 @@
+{
+  "domain": "cawood_pdf",
+  "name": "Cawood PDF",
+  "after_dependencies": ["hassio", "file_upload"],
+  "codeowners": ["@Davorin940720"],
+  "config_flow": true,
+  "dependencies": ["template"],
+  "documentation": "https://github.com/Davorin940720/Cawood_Systems/tree/main/CSHv4/Custom_Components/cawood_pdf",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Davorin940720/Cawood_Systems/tree/main/CSHv4/Custom_Components/cawood_pdf/issues",
+  "requirements": ["pymupdf==1.28.2"],
+  "version": "2026.11.0"
+}
