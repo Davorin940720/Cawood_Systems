@@ -1,0 +1,341 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "menu_options":
+        {
+          "http": "HTTP/HTTPS source",
+          "upload": "Upload a PDF file",
+          "local": "Local PDF file"
+        },
+        "description": "Choose a PDF source:"
+      },
+      "http": {
+        "title": "Configure PDF from URL",
+        "data": {
+          "name": "Name of PDF source",
+          "url": "URL of PDF",
+          "scan_interval": "Update Interval"
+        },
+        "data_description": {
+          "name": "If name not provided, will attempt to assign the name from the PDF metadata or URL will be used as name",
+          "url": "URL (http:// or https:// only)",
+          "scan_interval": "Minimum is {min_int}"
+        }
+      },
+      "local": {
+        "title": "Configure PDF from local file",
+        "description": "File paths must be accessible to Home Assistant. See the base [File]({url_file_integration}) integration documentation particularly the notes on using `allowlist_external_dirs` in the `configuration.yaml` file.",
+        "data": {
+          "name": "Name of PDF source",
+          "file": "Path to local PDF file"
+        },
+        "data_description": {
+          "name": "If name not provided, the file path will be used as name",
+          "file": "File path (must be accessible to Home Assistant)"
+        }
+      },
+      "upload": {
+        "title": "Upload a PDF",
+        "data": {
+          "name": "Name of PDF source",
+          "file": "PDF File to scrape for data"
+        },
+        "data_description": {
+          "name": "If name not provided, will attempt to assign name from PDF metadata",
+          "file": "No password protection or encryption supported"
+        }
+      }
+    },
+    "error": {
+      "invalid_url": "Bad URL",
+      "http_error": "Cannot access PDF @ provided URL: {msg}",
+      "invalid_source": "Accessed configuration from an invalid flow",
+      "unknown": "Unknown error",
+      "file_error": "File access error: {msg}",
+      "pdf_parse": "Cannot parse PDF: {msg}",
+      "exception": "Error: {msg}"
+    },
+    "progress": {
+      "pdf_process": "Processing PDF ..."
+    },
+    "abort": {
+      "already_configured": "PDF is already configured",
+      "http_already_configured": "A PDF @ {url} is already configured",
+      "upload_already_configured": "A PDF with the same sha256 checksum is already uploaded. While there is an exceedingly small chance that 2 different pdf files will have the same checksum it's very unlikely.  If you are certain that they pdf files are different, alter the metadata of the pdf file you are uploading which will create a unique checksum.",
+      "file_already_configured": "A PDF @ {file} is already configured",
+      "reconfigure_successful": "Reconfiguration successful.",
+      "pdf_parse": "Cannot parse PDF: {msg}",
+      "exception": "Error: {msg}",
+      "http_error": "Cannot access PDF @ provided URL: {msg}",
+      "file_error": "File access error: {msg}"
+    }
+  },
+  "config_subentries": {
+    "target": {
+      "initiate_flow": {
+        "user": "Add Search Target"
+      },
+      "entry_type": "Search Target",
+      "step": {
+        "user": {
+          "title": "Target Page(s)",
+          "description": "{title}",
+          "data": {
+            "pdf_pages": "Pages",
+            "ocr": "Use OCR (use with caution)"
+          },
+          "data_description": {
+            "pdf_pages": "Pages in PDF: {pages}. Use comma to separate multiple pages or hyphen for page ranges (e.g., 1,3-5,7).",
+            "ocr": "Use OCR to extract text.  This can be very slow and resource intensive, particularly for a large number of pages.  Use only if the PDF contains images and text extraction is not working.  OCR results can be highly variable and may not produce usable results depending on the quality of the source PDF.  Currently only English documents are supported. When possible, consider using an OCR tool prior to configuring the PDF in Home Assistant."
+          }
+        },
+        "regex": {
+          "title": "Regular Expression",
+          "description": "Pages {pdf_pages}: {title}",
+          "data": {
+            "regex_search": "Python Regex",
+            "page_text": "Text (Reference Only)"
+          },
+          "data_description": {
+            "regex_search": "Leave blank to use all text on selected page"
+          }
+        },
+        "sensor": {
+          "title": "Configure Sensor",
+          "data": {
+            "name": "Name",
+            "regex_match_index": "Select match",
+            "value_template": "Limited Template",
+            "unit_of_measurement": "Unit of Measurement",
+            "device_class": "Device Class",
+            "state_class": "State Class",
+            "device_id": "Device"
+          },
+          "data_description": {
+            "value_template": "If \"All Matches\" is selected, a template is required. `value` will be a `list` of matches. Use `value[idx]` to reference a specific match. Otherwise `value` is a `str` containing the selected match."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Search target configuration successful."
+      },
+      "error": {
+        "invalid_page_range": "Invalid page range. Use comma to separate multiple pages or hyphen for page ranges (e.g., 1,3-5,7).",
+        "bad_pattern": "Invalid regular expression pattern (see logs)",
+        "no_matches": "No matches found. Either fix or remove the regex to proceed.",
+        "pages_out_of_range": "One or more pages are out of range for the document."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "modified": {
+        "state_attributes": {
+          "md5_checksum": {
+            "name": "MD5 Checksum"
+          },
+          "modified_source": {
+            "name": "Source of Modified Time",
+            "state": {
+              "pdf_metadata": "PDF File Metadata",
+              "http_header": "HTTP Header",
+              "first_check": "First File Load Iime",
+              "checksum": "Checksum Changed",
+              "file_modification_time": "File Modified Time",
+              "upload": "Upload Time"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "pdf_error": {
+      "message": "Error opening PDF for \"{conf}\": {msg}"
+    },
+    "index_error": {
+      "message": "Page(s) {pages} doesn't appear to exist in {conf}"
+    },
+    "no_matches": {
+      "message": "No matches found using {regex} on {conf}"
+    },
+    "pattern_error": {
+      "message": "Regex pattern error: {msg} using {regex} on {conf}"
+    },
+    "template_error": {
+      "message": "Template error: {msg} on {conf}"
+    }
+  },
+  "selector": {
+    "sensor_device_class": {
+      "options": {
+        "absolute_humidity": "Absolute humidity",
+        "apparent_power": "Apparent power",
+        "aqi": "Air quality index",
+        "area": "Area",
+        "atmospheric_pressure": "Atmospheric pressure",
+        "battery": "Battery",
+        "blood_glucose_concentration": "Blood glucose concentration",
+        "carbon_dioxide": "Carbon dioxide",
+        "carbon_monoxide": "Carbon monoxide",
+        "conductivity": "Conductivity",
+        "current": "Current",
+        "data_rate": "Data rate",
+        "data_size": "Data size",
+        "date": "Date",
+        "distance": "Distance",
+        "duration": "Duration",
+        "energy": "Energy",
+        "energy_distance": "Energy per distance",
+        "energy_storage": "Stored energy",
+        "frequency": "Frequency",
+        "gas": "Gas",
+        "humidity": "Humidity",
+        "illuminance": "Illuminance",
+        "irradiance": "Irradiance",
+        "moisture": "Moisture",
+        "monetary": "Monetary balance",
+        "nitrogen_dioxide": "Nitrogen dioxide",
+        "nitrogen_monoxide": "Nitrogen monoxide",
+        "nitrous_oxide": "Nitrous oxide",
+        "ozone": "Ozone",
+        "ph": "pH",
+        "pm1": "PM1",
+        "pm10": "PM10",
+        "pm25": "PM2.5",
+        "pm4": "PM4",
+        "power": "Power",
+        "power_factor": "Power factor",
+        "precipitation": "Precipitation",
+        "precipitation_intensity": "Precipitation intensity",
+        "pressure": "Pressure",
+        "reactive_energy": "Reactive energy",
+        "reactive_power": "Reactive power",
+        "signal_strength": "Signal strength",
+        "sound_pressure": "Sound pressure",
+        "speed": "Speed",
+        "sulphur_dioxide": "Sulphur dioxide",
+        "temperature": "Temperature",
+        "timestamp": "Timestamp",
+        "volatile_organic_compounds": "Volatile organic compounds",
+        "volatile_organic_compounds_parts": "Volatile organic compounds parts",
+        "voltage": "Voltage",
+        "volume": "Volume",
+        "volume_flow_rate": "Volume flow rate",
+        "volume_storage": "Stored volume",
+        "water": "Water",
+        "weight": "Weight",
+        "wind_direction": "Wind direction",
+        "wind_speed": "Wind speed"
+      }
+    },
+    "sensor_state_class": {
+      "options": {
+        "measurement": "Measurement",
+        "measurement_angle": "Measurement angle",
+        "total": "Total",
+        "total_increasing": "Total increasing"
+      }
+    }
+  },
+  "services":{
+    "upload_pdf": {
+      "name": "Upload an Updated PDF",
+      "description": "Upload a new version of a configured PDF source. Either config_entry_id (Configuration Entry) or device_id (Device) must be selected but not both.",
+      "fields": {
+        "config_entry_id":  {
+          "name": "Configuration Entry of PDF to Update",
+          "description": "Either configuration entry or device must be selected."
+        },
+        "device_id":  {
+          "name": "Device of PDF to Update",
+          "description": "Either device or configuration entry must be selected."
+        },
+        "file": {
+          "name": "PDF File to Upload",
+          "description": "PDF File containing data to scrape."
+        }
+      }
+    }
+  },
+  "issues":{
+    "test_issue": {
+      "title": "Test Issue",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Test Issue",
+            "description": "{msg}  \n  \nReconfigure PDF?"
+          }
+        }
+      }
+    },
+    "test_issue_a": {
+      "title": "Test Issue A",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Test Issue A",
+            "description": "{msg}  \n  \nReconfigure PDF?"
+          }
+        }
+      }
+    },
+    "pdf_error": {
+      "title": "Error Opening PDF ({conf})",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Error Opening PDF ({conf})",
+            "description": "{msg}  \n  \nReconfigure PDF?"
+          }
+        }
+      }
+    },
+    "index_error": {
+      "title": "Page(s) Out of Range ({conf})",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Page(s) Out of Range ({conf})",
+            "description": "{msg}  \n  \nContinue?"
+          }
+        }
+      }
+    },
+    "pattern_error": {
+      "title": "Regular Expression Error ({conf})",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Regular Expression Error ({conf})",
+            "description": "{msg}  \n  \nContinue?"
+          }
+        }
+      }
+    },
+    "no_matches": {
+      "title": "No Matches Found ({conf})",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "No Matches Found ({conf})",
+            "description": "{msg}  \n  \nContinue?"
+          }
+        }
+      }
+    },
+    "template_error": {
+      "title": "Template Error ({conf})",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Template Error ({conf})",
+            "description": "{msg}  \n  \nContinue?"
+          }
+        }
+      }
+    }
+  }
+}
